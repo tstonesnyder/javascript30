@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JS Drum Kit</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="keys">
+    <!-- These are the keyboard keys (A,S,D,F,G,H,J,K) that will make sounds in this app when the user presses that key on the keyboard.  'data-key' is the associated keyCode for that keyboard key. -->
+    <div data-key="65" class="key">
+      <kbd>A</kbd>
+      <span class="sound">clap</span>
+    </div>
+    <div data-key="83" class="key">
+      <kbd>S</kbd>
+      <span class="sound">hihat</span>
+    </div>
+    <div data-key="68" class="key">
+      <kbd>D</kbd>
+      <span class="sound">kick</span>
+    </div>
+    <div data-key="70" class="key">
+      <kbd>F</kbd>
+      <span class="sound">openhat</span>
+    </div>
+    <div data-key="71" class="key">
+      <kbd>G</kbd>
+      <span class="sound">boom</span>
+    </div>
+    <div data-key="72" class="key">
+      <kbd>H</kbd>
+      <span class="sound">ride</span>
+    </div>
+    <div data-key="74" class="key">
+      <kbd>J</kbd>
+      <span class="sound">snare</span>
+    </div>
+    <div data-key="75" class="key">
+      <kbd>K</kbd>
+      <span class="sound">tom</span>
+    </div>
+    <div data-key="76" class="key">
+      <kbd>L</kbd>
+      <span class="sound">tink</span>
+    </div>
+  </div>
+
+  <!-- Any CUSTOM keys/properties? should be prefixed with 'data-' -->
+  <!-- These are the sound effects to associate with the keyCode specified by 'data-key' -->
+  <audio data-key="65" src="sounds/clap.wav"></audio>
+  <audio data-key="83" src="sounds/hihat.wav"></audio>
+  <audio data-key="68" src="sounds/kick.wav"></audio>
+  <audio data-key="70" src="sounds/openhat.wav"></audio>
+  <audio data-key="71" src="sounds/boom.wav"></audio>
+  <audio data-key="72" src="sounds/ride.wav"></audio>
+  <audio data-key="74" src="sounds/snare.wav"></audio>
+  <audio data-key="75" src="sounds/tom.wav"></audio>
+  <audio data-key="76" src="sounds/tink.wav"></audio>
+
+<script>
+  function playSound(e) {
+    // console.log(e.keyCode);
+    // Select an audio element with a data-key value matching the keyCode that the user pressed,
+    // use an attribute selector [] for that. Get null if not found.
+    const audio = document.querySelector(`audio[data-key="${e.keyCode}"]`);
+    // Similarly, get the on-screen element for the matching pressed key:
+    const key = document.querySelector(`.key[data-key="${e.keyCode}"]`);
+    // console.log(audio);
+    // console.log(key);
+    if (!audio) return;  // stop the function
+    // If press same key multiple time quickly, play() won't restart the audio file if it's already playing.
+    // So need to rewind it first.
+    audio.currentTime = 0;
+    audio.play();
+    // Add the 'playing' class to the on-screen element to visually indicate the key was pressed.
+    key.classList.add('playing');
+    // To REMOVE the class when transition is done: instead of using a timer ( setTimeout(function(){...}, 0.07) ), listen for the 'transitionend' event on each element (see below).
+  }
+
+  function removeTransition(e) {
+    // console.log(e);
+    // This will actually be triggered for EACH CSS effect that transitions -- which here is 4 events for rt/left/top/bot border color, 1 event for box-shadow, 1 event for transform/scale.
+    // But we only want to do this ONCE, so do it after the LAST transition event, which seems to be transform.
+    if (e.propertyName !== 'transform') return;
+    // Here, 'this' is the element that had the transition, so use that to remove the class (and thus remove the visual effect).
+    this.classList.remove('playing');
+  }
+
+  // Get an array of all our on-screen key elements (divs)
+  const keys = document.querySelectorAll('.key');
+  // Listen for a 'transitionend' event on EACH of those elements (can't listen on an array of elements) (that's when the CSS transition that we applied ENDS):
+  keys.forEach(key => key.addEventListener('transitionend', removeTransition))
+  
+  // Run the playSound function whenever a key is pressed in the window:
+  window.addEventListener('keydown', playSound);
+</script>
+</body>
+</html>
