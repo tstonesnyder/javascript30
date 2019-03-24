@@ -6,18 +6,11 @@
 </head>
 <body>
   <div class="clock">
-    <div class="hand-center hour">
+    <div class="hand-center">
       <div class="hand hour-hand"></div>
-    </div>
-    <div class="hand-center min">
       <div class="hand min-hand"></div>
-    </div>
-    <div class="hand-center sec">
       <div class="hand second-hand"></div>
-    </div>
-    <div class="clock-center"></div>
 
-    <div class="hand-center tick">
       <div class="tick-mark tick-9"></div>
       <div class="tick-mark tick-10"></div>
       <div class="tick-mark tick-11"></div>
@@ -31,6 +24,8 @@
       <div class="tick-mark tick-7"></div>
       <div class="tick-mark tick-8"></div>
     </div>
+    
+    <div class="clock-center"></div>
     <div id="time"></div>
   </div>
   <br>
@@ -91,23 +86,11 @@
       transform: translate(-10px,-10px); /* account for the height of the object, move up by HALF height */
     }
 
-    /* The invisible center rotation spots for each hand. */
+    /* The invisible center rotation spots for each hand and for the tick marks. */
     .hand-center {
       position: absolute;
       width: 300px;
       height: 300px;
-    }
-    .hand-center.hour {
-      /* account for the height of the clock hand */
-      transform: translateY(-5px); 
-    }
-    .hand-center.min {
-      /* account for the height of the clock hand */
-      transform: translateY(-3px); 
-    }
-    .hand-center.sec {
-      /* account for the height of the clock hand */
-      transform: translateY(-1px); 
     }
     /* 
     Each hand (which is a horizonatal div with a colored bkgrnd) rotates off the origin (which defaults to center of object), but we want to rotate off the right end of the hand (center of clock face).  So move the origin along the x-axis. By default, the origin is set to 50% of the x-axis and 50% of the y-axis (center of object), so set to 100% to be at right edge (you could also just do 'transform-origin: right'.
@@ -117,9 +100,9 @@
      */
     .hand {
       position: absolute;
-      top: 50%;
+      /* top: 50%; */
       width: 50%;
-      height: 6px;
+      /* height: 6px; */
       background: black;
       /* transform-origin: 100%; */
       transform-origin: right center;
@@ -131,9 +114,14 @@
     .second-hand {
       background: red;
       height: 2px;
+      /* top: 50%;  50% is same as 150px, then subtract 1px for half ht of the hand */
+      top: 149px;
     }
     /* Minute hand. */
     .min-hand {
+      /* top: 50%;  50% is same as 150px, then subtract 3px for half ht of the hand */
+      height: 6px;
+      top: 147px;
     }
     /* Make hour hand shorter. */
     .hour-hand {
@@ -141,17 +129,17 @@
       width: 35%;
       margin-left: 15%;
       height: 10px;
+      /* top: 50%;  50% is same as 150px, then subtract 5px for half ht of the hand */
+      top: 145px;
     }
 
-    /* Center of the tick marks along edges of clock face. */
-    .hand-center.tick {
-      transform: translateY(-3px); 
-    }
+
     /* Short straight line, just inside the clock border. */
     .tick-mark {
       position: absolute;
       background: red;
-      top: 50%;
+      /* top: 50%;  50% is same as 150px, then subtract 3px for half ht of the tick */
+      top: 147px;
       height: 6px;
       width: 10px;
       left: -15px;
