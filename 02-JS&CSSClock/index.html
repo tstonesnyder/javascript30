@@ -184,6 +184,7 @@
     const topOfClockDegrees = 90;
 
     // Get the current time:
+    // const now = new Date(2019,03,24,15,30,0);
     const now = new Date();
     const seconds = now.getSeconds();
     const minutes = now.getMinutes();
@@ -195,7 +196,8 @@
     // but add 90 degrees to include the initial 90 deg we have to rotate the starting horizontal line to get it to be vertical (pointing to 12:00).
     const secondsDegrees = ((seconds / 60) * 360 + topOfClockDegrees);
     const minutesDegrees = ((minutes / 60) * 360 + topOfClockDegrees);
-    const hoursDegrees = ((hours / 12) * 360 + topOfClockDegrees);
+    // const hoursDegrees = ((hours / 12) * 360 + topOfClockDegrees);
+    const hoursDegrees = (((hours + (minutes / 60)) / 12) * 360 + topOfClockDegrees);
 
     // Rotate each hand to the correct position on the circular clock face.
     // NOTE: When second hand goes from 59 sec to 0 sec, it is going from 359 deg to 0 deg, so the CSS animation will show it quickly REVERSING around the dial -- looks bad.
