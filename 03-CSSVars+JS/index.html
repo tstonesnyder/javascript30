@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scoped CSS Variables and JS</title>
+</head>
+<body>
+  <h2>Update CSS Variables with <span class='hl'>JS</span></h2>
+  <!-- NOTE: If we define the same var at a lower level than root, this var will retain its value and not change when we change the root-level 'base' var. -->
+  <!-- <h2 style="--base:#BADA55;">Update CSS Variables with <span class='hl'>JS</span></h2> -->
+
+  <div class="controls">
+    <!-- SLIDER INPUT CONTROL to allow input of spacing amt. -->
+    <label for="spacing">Spacing:</label>
+    <input id="spacing" type="range" name="spacing" min="10" max="200" value="10" data-sizing="px">
+
+    <!-- SLIDER INPUT CONTROL to allow input of blur amt for the photo below. -->
+    <label for="blur">Blur:</label>
+    <input id="blur" type="range" name="blur" min="0" max="25" value="10" data-sizing="px">
+    <br>
+
+    <!-- COLOR PICKER INPUT CONTROL to use for 'JS' in h2 heading above and for the border around the photo below. -->
+    <label for="base">Base Color:</label>
+    <input id="base" type="color" name="base" value="#ffc600">
+  </div>
+
+  <img src="https://source.unsplash.com/7bwQXzbF6KE/800x500">
+
+  <style>
+    /* Declare some CSS Variables. */
+    :root {
+      /* Set default values for each variable. */
+      --base: #ffc600;
+      --spacing: 10px;
+      --blur: 10px;
+    }
+
+    /* USE the CSS vars we defined above. */
+    img {
+      padding: var(--spacing);
+      background: var(--base);
+      filter: blur(var(--blur));
+    }
+    .hl {
+      color: var(--base);
+    }
+
+    /*
+      misc styles, nothing to do with CSS variables
+    */
+    body {
+      text-align: center;
+      background: #193549;
+      color: white;
+      font-family: 'helvetica neue', sans-serif;
+      font-weight: 100;
+      font-size: 50px;
+    }
+
+    .controls {
+      margin-bottom: 50px;
+    }
+
+    input {
+      width: 100px;
+    }
+
+    img {
+      width: 50%;
+    }
+  </style>
+
+  <script>
+    // Get a ref to all <input> elements inside the div with the 'controls' class. This returns a NodeList (which is like an array, but it has fewer methods: entries, forEach, keys, values, item, length (NOT map, reduce, etc). You can see this by looking at the prototype of the returned value.).
+    const inputs = document.querySelectorAll('.controls input');
+    // console.log(inputs);
+    
+    function handleUpdate() {
+      // Here, 'this' is the element that had the event.
+      console.log(this.value);
+      // NOTE: The html picker element will return values that we can use as-is (#ffffff),
+      // but sliders will return numeric values (like 10) and we need to set those controls using a suffix (like 10px). We are storing the suffix in each input element as the data attribute 'data-sizing'.
+      // NOTE: dataset is an OBJECT with all the data attributes (all attributes prefixed with 'data-') for that element.
+      const suffix = this.dataset.sizing || '';
+      // Update the CSS variable via its 'name' attribute (ex: set --blur to 10px)
+      document.documentElement.style.setProperty(`--${this.name}`, this.value + suffix);
+
+    }
+
+    // Listen for the 'change' event & the 'mousemove' event on EACH of the input elements.
+    // NOTE: 'change' only fires when user is DONE moving moving on slider, but we want screen to update AS they're moving it, so also use 'mousemove' event.
+    inputs.forEach(input => input.addEventListener('change', handleUpdate));
+    // COULD set this to only trigger when user lets go of mouse, but we'll leave it triggering for every mvmt to keep it simple.
+    inputs.forEach(input => input.addEventListener('mousemove', handleUpdate));
+
+  </script>
+
+</body>
+</html>
