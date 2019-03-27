@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Type Ahead 👀</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <form class="search-form">
+    <input type="text" class="search" placeholder="City or State">
+    <ul class="suggestions">
+      <li>Filter for a city</li>
+      <li>or a state</li>
+    </ul>
+  </form>
+
+<script>
+  // This the URL of a json file containing an array of objects containing city info
+  const endpoint = 'https://gist.githubusercontent.com/Miserlou/c5cd8364bf9b2420bb29/raw/2bf258763cdddd704f8ffd3ea9a3e81d25e2c6f6/cities.json';
+
+  // LOAD THE CITY INFO FROM THE INTERNET:
+  const cities = [];
+  // Get the file from the server using browser method (returns a promise):
+  fetch(endpoint)
+  .then(blob => {
+    // Returns a raw data -- a Response object w/ properties like: 
+    // body (a ReadableStream), bodyUsed, headers, ok, status, statusText, type, url
+    // console.log(blob);
+
+    // convert the ReadableStream of the body to json? (returns another promise)
+    return blob.json();
+  })
+  .then(data => {
+    // This returns the actual contents of the file,
+    // which is an array of 1000 objects
+    // console.log(data);
+    // load this array into our const using the ES6 spread operator,
+    // which will separate the array into individual elements
+    // which are then separately pushed into the array
+    cities.push(...data);
+  });
+
+  function findMatches(wordToMatch, cities) {
+    return cities.filter(place => {
+      // Do a regEx search for the word on the city
+      // If not found there, look in state
+      // (global, case-insensitive)
+      const regex = new RegExp(wordToMatch, 'gi');
+      return place.city.match(regex) || place.state.match(regex);
+    });
+  }
+
+  // Take an INTEGER and returns it as a string with commas (doesn't work with decimals)
+  function numberWithCommas(nbr) {
+    // get the BOUNDARY before each 1+ groups of 3 digits, only if each group is NOT followed by another digit
+    return nbr.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  function displayMatches() {
+    // console.log(this.value);
+    const matchArray = findMatches(this.value, cities);
+    // console.log(matchArray);
+    const html = matchArray.map(place => {
+      // REPLACE the MATCHING part of the city name with some html
+      const regex = new RegExp(this.value, 'gi');
+      const cityName = place.city.replace(regex, `<span class="hl">${this.value}</span>`);
+      const stateName = place.state.replace(regex, `<span class="hl">${this.value}</span>`);
+      return `
+        <li>
+          <span class="name">${cityName}, ${stateName}</span>
+          <span class="population">${numberWithCommas(place.population)}</span>
+        </li>
+      `;
+    }).join('');  // turn returned array into a string (should have just used reduce()?)
+    // console.log(html);
+    suggestions.innerHTML = html;
+  }
+
+  // Get a ref to the input control
+  const searchInput = document.querySelector('.search');
+  // Get a ref to the LIST where we will show the suggestions:
+  const suggestions = document.querySelector('.suggestions');
+
+  // Listen for changes in the input control, so we can suggest things as the user types:
+  // The 'change' event only fires when leave that input control, not for each char typed.
+  // So we need to also listen for 'keyup' events. 
+  searchInput.addEventListener('change', displayMatches);
+  searchInput.addEventListener('keyup', displayMatches);
+
+
+</script>
+</body>
+</html>
