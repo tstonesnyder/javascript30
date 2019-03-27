@@ -40,6 +40,66 @@
     cities.push(...data);
   });
 
+  // Get a ref to the input control
+  const searchInput = document.querySelector('.search');
+  // Get a ref to the LIST where we will show the suggestions:
+  const suggestions = document.querySelector('.suggestions');
+
+  // Listen for changes in the input control, so we can suggest things as the user types:
+  // The 'change' event only fires when leave that input control, not for each char typed.
+  // So we need to also listen for 'keyup' events. 
+  searchInput.addEventListener('change', displayMatches);
+  searchInput.addEventListener('keyup', displayMatches);
+
+
+  // CODE ADDED FOR GEOLOCATION--------------
+  const userPos = {set: false, latitude: 0, longitude: 0};  // This is in the Atlantic Ocean, so unlikely to be real location
+  // if (navigator.geolocation) {
+  if ("geolocation" in navigator) {
+    /* geolocation is available */
+    navigator.geolocation.getCurrentPosition(
+      // success function
+      (pos => {
+        userPos.set = true; 
+        userPos.latitude = pos.coords.latitude; 
+        userPos.longitude = pos.coords.longitude;
+        console.log('position is set');
+      }),
+      // err function
+      (err => console.log("Error: cannot get user's location.\n", err)),
+      // options
+      {}
+    );
+  } else {
+    /* geolocation IS NOT available */
+    console.log('unable to get position');
+  }
+
+  // http://breakthebit.org/post/10512237123/using-html5-geolocation-api-to-get-the-distance-of
+  const Geolocation = {
+    rad: function(x) { return x * Math.PI / 180; },
+
+    // Distance in km between two points using the Haversine algo.
+    haversine: function(p1, p2) {
+      const R = 6371;
+      const dLat  = this.rad(p2.latitude - p1.latitude);
+      const dLong = this.rad(p2.longitude - p1.longitude);
+
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(this.rad(p1.latitude)) * Math.cos(this.rad(p2.latitude)) * 
+                Math.sin(dLong/2) * Math.sin(dLong/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const d = R * c;
+      return Math.round(d)
+    },
+
+    getDistanceFromUser: function(lat, long) {
+      return this.haversine(userPos, {latitude: lat, longitude: long});
+    }
+  };
+  // END OF CODE ADDED FOR GEOLOCATION--------------
+
+
   function findMatches(wordToMatch, cities) {
     return cities.filter(place => {
       // Do a regEx search for the word on the city
@@ -60,6 +120,20 @@
     // console.log(this.value);
     const matchArray = findMatches(this.value, cities);
     // console.log(matchArray);
+    
+    // CODE ADDED FOR GEOLOCATION--------------
+    if (userPos.set) {
+      // Add a 'dist' property to each elem in the array (distance of each city from the user)
+      matchArray.map(place => place.dist = Geolocation.getDistanceFromUser(place.latitude, place.longitude));
+      // Sort the matches by distance from the user (sorted IN PLACE)
+      matchArray.sort((a, b) => {
+        if (a.dist < b.dist) return -1;
+        if (a.dist > b.dist) return 1;
+        return 0;
+      });
+    }
+    // END OF CODE ADDED FOR GEOLOCATION--------------
+
     const html = matchArray.map(place => {
       // REPLACE the MATCHING part of the city name with some html
       const regex = new RegExp(this.value, 'gi');
@@ -75,17 +149,6 @@
     // console.log(html);
     suggestions.innerHTML = html;
   }
-
-  // Get a ref to the input control
-  const searchInput = document.querySelector('.search');
-  // Get a ref to the LIST where we will show the suggestions:
-  const suggestions = document.querySelector('.suggestions');
-
-  // Listen for changes in the input control, so we can suggest things as the user types:
-  // The 'change' event only fires when leave that input control, not for each char typed.
-  // So we need to also listen for 'keyup' events. 
-  searchInput.addEventListener('change', displayMatches);
-  searchInput.addEventListener('keyup', displayMatches);
 
 
 </script>
