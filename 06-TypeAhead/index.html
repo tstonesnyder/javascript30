@@ -17,66 +17,134 @@
 <script>
   // This the URL of a json file containing an array of objects containing city info
   const endpoint = 'https://gist.githubusercontent.com/Miserlou/c5cd8364bf9b2420bb29/raw/2bf258763cdddd704f8ffd3ea9a3e81d25e2c6f6/cities.json';
-
-  // LOAD THE CITY INFO FROM THE INTERNET:
+  // Object to store user's current position:
+  const userPos = {set: false, latitude: 0, longitude: 0};
+  // Array to hold city objects downloaded from internet:
   const cities = [];
-  // Get the file from the server using browser method (returns a promise):
-  fetch(endpoint)
-  .then(blob => {
-    // Returns a raw data -- a Response object w/ properties like: 
-    // body (a ReadableStream), bodyUsed, headers, ok, status, statusText, type, url
-    // console.log(blob);
-
-    // convert the ReadableStream of the body to json? (returns another promise)
-    return blob.json();
-  })
-  .then(data => {
-    // This returns the actual contents of the file,
-    // which is an array of 1000 objects
-    // console.log(data);
-    // load this array into our const using the ES6 spread operator,
-    // which will separate the array into individual elements
-    // which are then separately pushed into the array
-    cities.push(...data);
-  });
-
   // Get a ref to the input control
   const searchInput = document.querySelector('.search');
   // Get a ref to the LIST where we will show the suggestions:
   const suggestions = document.querySelector('.suggestions');
 
-  // Listen for changes in the input control, so we can suggest things as the user types:
-  // The 'change' event only fires when leave that input control, not for each char typed.
-  // So we need to also listen for 'keyup' events. 
-  searchInput.addEventListener('change', displayMatches);
-  searchInput.addEventListener('keyup', displayMatches);
+  loadData();
 
+  async function loadData () {
+    // First download the list of cities:
+    try {
+      // fetch() returns a raw data -- a Response object w/ properties like: 
+      // body (a ReadableStream), bodyUsed, headers, ok, status, statusText, type, url
+      // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+      response = await fetch(endpoint);
+      // console.log(response);
+      if (!response.ok) {
+        // This will drop to catch below
+        throw new Error('Network response was not ok.');
+      }
 
-  // CODE ADDED FOR GEOLOCATION--------------
-  const userPos = {set: false, latitude: 0, longitude: 0};  // This is in the Atlantic Ocean, so unlikely to be real location
-  // if (navigator.geolocation) {
-  if ("geolocation" in navigator) {
-    /* geolocation is available */
-    navigator.geolocation.getCurrentPosition(
-      // success function
-      (pos => {
-        userPos.set = true; 
-        userPos.latitude = pos.coords.latitude; 
-        userPos.longitude = pos.coords.longitude;
-        console.log('position is set');
-      }),
-      // err function
-      (err => console.log("Error: cannot get user's location.\n", err)),
-      // options
-      {}
-    );
-  } else {
-    /* geolocation IS NOT available */
-    console.log('unable to get position');
+      // Convert the ReadableStream of the body to json? (returns another promise)
+      data = await response.json();
+      // console.log(data);
+      // This returns the actual contents of the file (which is an array of 1000 objects)
+      // Load this array into our const using the ES6 spread operator, which will separate the array into individual elements which are then separately pushed into the array
+      cities.push(...data);
+      console.log('Cities are loaded.');
+    } catch (err) {
+      console.log('Error downloading list of cities:')
+      console.error(err);
+      alert('Error downloading list of cities!');
+      // Fatal error because we need the list of cities to do anything.
+      return;
+    }
+
+    // Next try to get the user's location:
+    try {
+      const pos = await getUserGeolocation();
+      userPos.set = true; 
+      userPos.latitude = pos.coords.latitude; 
+      userPos.longitude = pos.coords.longitude;
+      console.log('position is set');
+
+      // Add a 'dist' property to each elem in the cities array (distance of each city from the user)
+      cities.map(place => place.dist = Distance.getDistanceFromUser(place.latitude, place.longitude));
+
+      // Also SORT the cities array (SORTED IN PLACE) by distance from the user
+      // so we won't have to sort it for each match (THIS ASSUMES USER'S LOCATION WON'T CHANGE).
+      // (this would only be a problem if the user's position was CHANGING while leaving this page open, but that's unlikely -- in that case we'd have to resort after each search)
+      cities.sort((a, b) => {
+        if (a.dist < b.dist) return -1;
+        if (a.dist > b.dist) return 1;
+        return 0;
+      });
+    } catch (err) {
+      console.log('Position is NOT set. Cities will not be sorted by distance.');
+      // This is not a big deal, we just won't calc the distances or sort the cities.
+    }
+
+    // WAIT FOR ALL THE STUFF ABOVE TO BE DONE, THEN:
+    // Listen for changes in the input control, so we can suggest things as the user types:
+    // The 'change' event only fires when leave that input control, not for each char typed.
+    // So we need to also listen for 'keyup' events. 
+    searchInput.addEventListener('change', displayMatches);
+    searchInput.addEventListener('keyup', displayMatches);
   }
 
-  // http://breakthebit.org/post/10512237123/using-html5-geolocation-api-to-get-the-distance-of
-  const Geolocation = {
+
+  // Get the geolocation of the current user.
+  // Returns a Promise that resolves with object {latitude, longitude} if successful,
+  // or error if not successful.
+  async function getUserGeolocation () {
+    if (!navigator.geolocation) {
+      /* geolocation IS NOT available in this browser */
+      const msg = "Cannot get user's location. Geolocation is not supported by this browser.";
+      console.log(msg);
+      // These 2 stmts are supposed to do the same thing here:
+      // throw new Error(msg);
+      // await Promise.reject(new Error(msg));
+      // trying this instead:
+      return Promise.reject(new Error(msg));
+      // Dumb way, and it resolves instead of rejecting:
+      // return new Promise(resolve => resolve({}));
+    }
+
+    /* geolocation is available */
+    try {
+      const options = {};  // MAY want to set accuracy or timeout?
+
+      // WRAP THIS CALL IN A PROMISE, CUZ IT ONLY USES CALLBACKS.
+      // NOTE: This will display an alert to the user asking for permission to get location. If user says 'no' that will generate a PERMISSION_DENIED error.
+      // const pos = await getCurrentPosition();
+      const pos = await new Promise(
+        (resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, options)
+      );
+      return pos;  // this will automatically be wrapped in a Promise cuz this is an async function
+    } catch (err) {
+      console.log(error);
+      let msg = null;
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          msg = "User denied the request for Geolocation.";
+          break;
+        case error.POSITION_UNAVAILABLE:
+          msg = "Location information is unavailable.";
+          break;
+        case error.TIMEOUT:
+          msg = "The request to get user location timed out.";
+          break;
+        case error.UNKNOWN_ERROR:
+          msg = "An unknown error occurred.";
+          break;
+      }
+      alert(msg);
+      // These 2 stmts are supposed to do the same thing here:
+      // await Promise.reject(new Error(msg));
+      throw new Error(msg);
+    }
+  }
+
+
+  // Object with code to calc distance between 2 points
+  const Distance = {
+    // http://breakthebit.org/post/10512237123/using-html5-geolocation-api-to-get-the-distance-of
     rad: function(x) { return x * Math.PI / 180; },
 
     // Distance in km between two points using the Haversine algo.
@@ -97,43 +165,29 @@
       return this.haversine(userPos, {latitude: lat, longitude: long});
     }
   };
-  // END OF CODE ADDED FOR GEOLOCATION--------------
 
-
+  // Do regex match to find cities/states that match the user-entered string
+  // Returns an array of matching places from the cities array.
   function findMatches(wordToMatch, cities) {
     return cities.filter(place => {
-      // Do a regEx search for the word on the city
-      // If not found there, look in state
+      // Do a regEx search for the word on the city. If not found there, look in state
       // (global, case-insensitive)
       const regex = new RegExp(wordToMatch, 'gi');
       return place.city.match(regex) || place.state.match(regex);
     });
   }
 
-  // Take an INTEGER and returns it as a string with commas (doesn't work with decimals)
+  // Take an INTEGER and return it as a string with commas (doesn't work with decimals)
   function numberWithCommas(nbr) {
     // get the BOUNDARY before each 1+ groups of 3 digits, only if each group is NOT followed by another digit
     return nbr.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
+  // Runs when user types in input element, modifies the contents of the <ul> element to display list of matches
   function displayMatches() {
     // console.log(this.value);
     const matchArray = findMatches(this.value, cities);
     // console.log(matchArray);
-    
-    // CODE ADDED FOR GEOLOCATION--------------
-    if (userPos.set) {
-      // Add a 'dist' property to each elem in the array (distance of each city from the user)
-      matchArray.map(place => place.dist = Geolocation.getDistanceFromUser(place.latitude, place.longitude));
-      // Sort the matches by distance from the user (sorted IN PLACE)
-      matchArray.sort((a, b) => {
-        if (a.dist < b.dist) return -1;
-        if (a.dist > b.dist) return 1;
-        return 0;
-      });
-    }
-    // END OF CODE ADDED FOR GEOLOCATION--------------
-
     const html = matchArray.map(place => {
       // REPLACE the MATCHING part of the city name with some html
       const regex = new RegExp(this.value, 'gi');
@@ -149,8 +203,6 @@
     // console.log(html);
     suggestions.innerHTML = html;
   }
-
-
 </script>
 </body>
 </html>
